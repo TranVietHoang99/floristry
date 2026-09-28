@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Floristry</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌷</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Fraunces:opsz,wght@9..144,700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{
+  --bg:#f5efe6; --panel:#fffdf8; --ink:#33291f; --muted:#8f7d6a; --line:#e9dccb;
+  --green:#3f7d58; --green-d:#2b5a3e; --pink:#d9577a; --pink-d:#a83a5a; --gold:#e3a93c; --gold-d:#b37c1c;
+  --wood:#f3e2c3; --wood-d:#d8bf94; --glass:#e6f0f1; --glass-d:#c9dcdf;
+  --cs:50px; --cs2:24px; --gap:4px; --radius:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:"Baloo 2",system-ui,"Segoe UI",sans-serif;color:var(--ink);
+  background:
+    radial-gradient(circle at 0 0,rgba(217,87,122,.14) 0,transparent 40%),
+    radial-gradient(circle at 100% 100%,rgba(63,125,88,.14) 0,transparent 45%),
+    var(--bg);
+  background-attachment:fixed;
+}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
+
+/* ---------- Lobby ---------- */
+#lobby{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.lobby-card{
+  width:100%;max-width:430px;background:var(--panel);border-radius:28px;padding:26px 24px;
+  box-shadow:0 14px 40px rgba(63,125,88,.16);text-align:center;border:3px solid var(--line);
+}
+.logo{font-size:60px;line-height:1}
+h1{margin:4px 0 0;font-family:"Fraunces",serif;font-weight:700;font-size:2.8rem;line-height:1;color:var(--pink)}
+.tag{color:var(--muted);margin:4px 0 16px}
+label{display:block;text-align:left;font-weight:700;font-size:.95rem;margin:12px 0 4px}
+input{
+  width:100%;font:inherit;font-size:1.05rem;padding:10px 14px;border-radius:12px;
+  border:2px solid var(--line);background:#fff;color:var(--ink);outline:none;
+}
+input:focus{border-color:var(--pink)}
+#codeInput{text-transform:uppercase;letter-spacing:4px;text-align:center;font-weight:800}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:14px;
+  padding:10px 16px;font-size:1.02rem;font-weight:800;color:#fff;background:var(--pink);
+  box-shadow:0 4px 0 var(--pink-d);transition:transform .08s, box-shadow .08s;
+}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--pink-d)}
+.btn.green{background:var(--green);box-shadow:0 4px 0 var(--green-d)}
+.btn.gold{background:var(--gold);box-shadow:0 4px 0 var(--gold-d)}
+.btn.ghost{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none;padding:6px 12px;font-size:.95rem}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
+.row{display:flex;gap:10px;margin-top:14px}
+.row>*{flex:1}
+.or{margin:18px 0 0;color:var(--muted);display:flex;align-items:center;gap:10px}
+.or:before,.or:after{content:"";flex:1;height:2px;background:var(--line)}
+.msg{min-height:1.4em;margin-top:12px;color:var(--pink-d);font-weight:700}
+.waiting .code{
+  font-size:2.6rem;font-weight:800;letter-spacing:8px;color:var(--green);
+  background:#eef6f0;border:3px dashed var(--green);border-radius:18px;padding:6px 10px;margin:10px 0;
+}
+.waiting .link{font-size:.85rem;word-break:break-all;color:var(--muted);margin:8px 0}
+.dots:after{content:"";animation:dots 1.4s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+
+/* ---------- Game ---------- */
+#game{max-width:1180px;margin:0 auto;padding:10px 16px 24px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+header .title{font-family:"Fraunces",serif;font-size:1.7rem;color:var(--pink);line-height:1}
+header .info{font-weight:700;color:var(--muted);font-size:.95rem}
+header .info b{color:var(--ink)}
+header .sp{flex:1}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.panel{background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:0 6px 18px rgba(63,125,88,.06)}
+.panel+.panel{margin-top:12px}
+.ptitle{display:flex;align-items:center;gap:8px;font-weight:800;font-size:1.05rem;margin-bottom:8px;flex-wrap:wrap}
+.ptitle .sub{font-weight:600;color:var(--muted);font-size:.9rem}
+.ptitle .sp{flex:1}
+.money{font-weight:800;color:var(--gold-d)}
+.small{font-size:.85rem;color:var(--muted);font-weight:600}
+
+/* flower tokens */
+.fl{
+  width:78%;height:78%;border-radius:50%;display:grid;place-items:center;background:var(--fc);
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.12);font-size:calc(var(--sz,var(--cs))*.46);line-height:1;
+}
+.f-T{--fc:#f6d44c}.f-R{--fc:#e8566a}.f-M{--fc:#8fc867}.f-D{--fc:#f7a3c8}.f-H{--fc:#76a4ec}.f-L{--fc:#f6a04a}
+
+/* domino (market / tray) */
+.dom{--sz:44px;display:inline-flex;background:var(--wood);border:2px solid var(--wood-d);border-radius:10px;padding:3px;gap:0;flex:none;
+  box-shadow:0 3px 6px rgba(80,50,20,.18);transition:transform .12s, box-shadow .12s;position:relative}
+.dom.v{flex-direction:column}
+.dom .h{width:var(--sz);height:var(--sz);display:grid;place-items:center}
+.dom .h+.h{border-left:1px dashed var(--wood-d)}
+.dom.v .h+.h{border-left:0;border-top:1px dashed var(--wood-d)}
+.dom.click{cursor:pointer}
+.dom.click:hover{transform:translateY(-3px)}
+.dom.sel{transform:translateY(-6px);box-shadow:0 0 0 4px var(--pink),0 8px 14px rgba(80,50,20,.25)}
+.dom.pick{box-shadow:0 0 0 4px var(--green),0 8px 14px rgba(80,50,20,.25);transform:translateY(-6px)}
+.dom.used{opacity:.25}
+.dom .who{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:.75rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.tiles{display:flex;flex-wrap:wrap;gap:12px;align-items:center;min-height:62px}
+
+/* auction */
+.auc{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:12px}
+.clock{
+  width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;position:relative;
+  background:conic-gradient(var(--pink) calc(var(--p,1)*360deg), #f3dfe5 0);
+}
+.clock:before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--panel)}
+.clock span{position:relative;font-weight:800;font-size:2rem;color:var(--gold-d);line-height:1;text-align:center}
+.clock small{display:block;font-size:.72rem;color:var(--muted)}
+.buyBtn{font-size:1.4rem;padding:14px 26px}
+.steps{display:flex;gap:4px}
+.steps span{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;background:#f2ebe0;color:var(--muted)}
+.steps span.on{background:var(--gold);color:#fff}
+.readyRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.chip{padding:4px 10px;border-radius:999px;background:#f2ebe0;font-weight:700;font-size:.9rem}
+.chip.ok{background:#dcefe2;color:var(--green-d)}
+.lastMove{background:#fdf1f4;border:2px solid #f5cfd9;border-radius:12px;padding:6px 10px;font-weight:700;margin-bottom:8px}
+
+/* storefront grid */
+.frame{display:inline-grid;gap:var(--gap);padding:8px;border-radius:14px;background:#fbf7f1;position:relative;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.cell{width:var(--cs);height:var(--cs);border-radius:8px;position:relative;display:grid;place-items:center}
+.cell.in{background:var(--glass);box-shadow:inset 0 0 0 1px var(--glass-d)}
+.cell.out{background:transparent;outline:1px dashed transparent}
+.frame.placing .cell.out{outline-color:#e6d8c4}
+.cell.t{background:var(--wood);box-shadow:inset 0 0 0 2px var(--wood-d)}
+.cell.t::after{content:"";position:absolute;background:var(--wood);z-index:1}
+.cell.d0::after{right:calc(-1*var(--gap) - 2px);top:2px;bottom:2px;width:calc(var(--gap) + 4px)}
+.cell.d2::after{left:calc(-1*var(--gap) - 2px);top:2px;bottom:2px;width:calc(var(--gap) + 4px)}
+.cell.d1::after{bottom:calc(-1*var(--gap) - 2px);left:2px;right:2px;height:calc(var(--gap) + 4px)}
+.cell.d3::after{top:calc(-1*var(--gap) - 2px);left:2px;right:2px;height:calc(var(--gap) + 4px)}
+.cell .fl{position:relative;z-index:2}
+.cell.new{animation:pop .4s ease-out}
+@keyframes pop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+.cell.gh{outline:3px solid var(--green);outline-offset:-1px;z-index:3}
+.cell.gh.bad{outline-color:var(--pink)}
+.cell .ghf{position:absolute;inset:11%;width:auto;height:auto;opacity:.75}
+.cell.t.gh .fl{opacity:.75}
+.cell.gh.bad .fl{opacity:.35}
+.cell.hl{box-shadow:inset 0 0 0 3px var(--gold),0 0 0 2px var(--gold)}
+.frame.mini{--cs:var(--cs2);--gap:2px;padding:5px}
+.frame.mini .cell{border-radius:4px}
+.frame.mini .cell.t{box-shadow:inset 0 0 0 1px var(--wood-d)}
+.frame.mini .fl{--sz:var(--cs2)}
+.frame.mini .cell.hl{box-shadow:inset 0 0 0 2px var(--gold)}
+.boardWrap{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.tray{display:flex;flex-direction:column;gap:10px;min-width:150px;flex:1}
+.tray .tiles{min-height:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.hint{color:var(--muted);font-weight:700;min-height:1.4em}
+.hint.warn{color:var(--pink-d)}
+
+/* score table */
+.stbl{width:100%;border-collapse:collapse;font-size:.92rem}
+.stbl th,.stbl td{padding:3px 4px;text-align:center;border-bottom:1px dashed var(--line)}
+.stbl th:first-child,.stbl td:first-child{text-align:left}
+.stbl tr.fr{cursor:default}
+.stbl tr.fr:hover{background:#fbf3e3}
+.stbl .pt{font-weight:800;color:var(--green)}
+.stbl tr.tot td{font-weight:800;border-bottom:0;font-size:1rem}
+.chart{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.chart span{flex:1;min-width:52px;text-align:center;background:#eef6f0;border-radius:8px;padding:2px 4px;font-size:.8rem;font-weight:700}
+.chart b{display:block;color:var(--green);font-size:1rem}
+
+.log{max-height:220px;overflow:auto;font-size:.92rem;display:flex;flex-direction:column;gap:3px}
+.log div{padding:2px 0;border-bottom:1px dashed var(--line)}
+.log div.sys{color:var(--pink-d);font-weight:800}
+
+/* overlay */
+.overlay{position:fixed;inset:0;background:rgba(51,41,31,.45);display:grid;place-items:center;padding:16px;z-index:50}
+.modal{background:var(--panel);border-radius:24px;padding:22px 20px;max-width:540px;width:100%;border:3px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.25);max-height:92vh;overflow:auto}
+.modal h2{margin:0 0 6px;font-family:"Fraunces",serif;font-weight:700;font-size:1.8rem;color:var(--pink);text-align:center}
+.modal table{width:100%;border-collapse:collapse;margin:10px 0}
+.modal th,.modal td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:center}
+.modal th:first-child,.modal td:first-child{text-align:left}
+.modal tr.total td{font-weight:800;font-size:1.1rem}
+.modal .rules{font-size:.95rem;line-height:1.45}
+.modal .rules h3{margin:12px 0 4px;color:var(--green)}
+.modal .rules ul{margin:4px 0;padding-left:20px}
+.toast{
+  position:fixed;left:50%;bottom:20px;transform:translate(-50%,40px);opacity:0;background:var(--ink);color:#fff;
+  padding:10px 16px;border-radius:12px;font-weight:700;transition:.25s;z-index:60;max-width:calc(100vw - 32px);text-align:center;pointer-events:none;
+}
+.toast.show{transform:translate(-50%,0);opacity:1}
+
+@media (max-width:960px){
+  .layout{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  :root{--cs:min(50px,calc((100vw - 32px - 28px - 16px - 9*3px)/10));--gap:3px}
+  #game{padding:8px 16px 20px}
+  .panel{padding:10px}
+  header .title{font-size:1.4rem}
+  .dom{--sz:36px}
+  .clock{width:78px;height:78px}
+  .buyBtn{font-size:1.2rem;padding:12px 18px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOBBY ============ -->
+<section id="lobby">
+  <div class="lobby-card">
+    <div id="lobbyMain">
+      <div class="logo">💐</div>
+      <h1>Floristry</h1>
+      <p class="tag">Đấu giá hoa kiểu Hà Lan & trang trí tủ kính · 2 người</p>
+      <label for="nameInput">Tên của bạn</label>
+      <input id="nameInput" maxlength="16" placeholder="VD: Hoàng" autocomplete="off">
+      <div class="row"><button class="btn" id="createBtn">Tạo phòng</button></div>
+      <div class="or">hoặc vào phòng của bạn bè</div>
+      <label for="codeInput">Mã phòng</label>
+      <input id="codeInput" maxlength="5" placeholder="ABCDE" autocomplete="off">
+      <div class="row"><button class="btn green" id="joinBtn">Vào phòng</button></div>
+      <div class="or">hoặc</div>
+      <div class="row"><button class="btn gold" id="botBtn">Chơi với máy</button></div>
+      <div class="row"><button class="btn ghost" id="rulesBtn0">Xem luật chơi</button></div>
+      <div class="msg" id="lobbyMsg"></div>
+    </div>
+    <div id="lobbyWait" class="waiting hidden">
+      <div class="logo">💐</div>
+      <h2 style="margin:6px 0 0">Phòng đã tạo!</h2>
+      <p class="tag">Gửi mã này cho bạn bè</p>
+      <div class="code" id="waitCode">-----</div>
+      <div class="link" id="waitLink"></div>
+      <div class="row"><button class="btn green" id="copyBtn">Sao chép link</button></div>
+      <p class="tag" style="margin-top:16px">Đang chờ người chơi thứ hai<span class="dots"></span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GAME ============ -->
+<section id="game" class="hidden">
+  <header>
+    <span class="title">Floristry</span>
+    <span class="info" id="roomInfo"></span>
+    <span class="info">Vòng <b id="roundNo">1</b>/10</span>
+    <span class="sp"></span>
+    <button class="btn ghost" id="rulesBtn">Luật</button>
+  </header>
+  <div class="layout">
+    <main>
+      <div class="panel">
+        <div class="ptitle">🔔 Chợ hoa Aalsmeer <span class="sub" id="bagInfo"></span></div>
+        <div id="lastMove"></div>
+        <div id="auction"></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle" id="meTitle"></div>
+        <div class="boardWrap">
+          <div class="frame" id="myFrame"></div>
+          <div class="tray" id="tray"></div>
+        </div>
+      </div>
+    </main>
+    <aside>
+      <div class="panel">
+        <div class="ptitle" id="oppTitle"></div>
+        <div class="frame mini" id="oppFrame"></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">🏅 Điểm tạm tính</div>
+        <div id="scoreBox"></div>
+        <div class="chart">
+          <span>3–5<b>1</b></span><span>6–8<b>3</b></span><span>9–11<b>6</b></span><span>12+<b>10</b></span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">📜 Nhật ký</div>
+        <div class="log" id="log"></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<div id="overlay" class="overlay hidden"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= RULES / ENGINE ================= */
+const TYPES=["T","R","M","D","H","L"]; // thứ tự tính điểm theo luật
+const INFO={
+  T:{n:"Tulip",e:"🌷"}, R:{n:"Hoa hồng",e:"🌹"}, M:{n:"Cúc",e:"🌼"},
+  D:{n:"Cúc hoạ mi",e:"🌸"}, H:{n:"Cẩm tú cầu",e:"💠"}, L:{n:"Loa kèn",e:"🌺"}
+};
+const FW=8, FH=6;                  // khung tủ kính 8×6 ô
+const ROUNDS=10, START_FUNDS=30, MARKET=4, TAKE=3;
+const AUC_MS=15000, STEP_MS=3000, START_PRICE=5, PREP_MS=1500;
+const DIRS=[[1,0],[0,1],[-1,0],[0,-1]]; // hướng từ nửa A tới nửa B
+const pts = n => n>=12?10 : n>=9?6 : n>=6?3 : n>=3?1 : 0;
+const sum = a => a.reduce((s,x)=>s+x,0);
+
+function rnd(n){ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]%n; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=rnd(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+// 42 ô domino, mỗi loại hoa xuất hiện đúng 14 lần.
+function makeTiles(){
+  const pairs=[];
+  for(const t of TYPES) pairs.push([t,t]);                                          // 6 ô đôi
+  for(let i=0;i<6;i++) for(let j=i+1;j<6;j++) pairs.push([TYPES[i],TYPES[j]],[TYPES[j],TYPES[i]]); // 30 ô
+  for(let i=0;i<6;i++) pairs.push([TYPES[i],TYPES[(i+1)%6]]);                      // 6 ô
+  return pairs.map(([a,b],id)=>({id,a,b}));
+}
+const emptyGrid = () => Array.from({length:FH},()=>Array(FW).fill(null));
+const cloneGrid = g => g.map(r=>r.map(c=>c&&{...c}));
+const inside = (x,y) => x>=0&&y>=0&&x<FW&&y<FH;
+
+function tileCells(tile,x,y,o){
+  const [dx,dy]=DIRS[o];
+  return [{x,y,t:tile.a,d:o},{x:x+dx,y:y+dy,t:tile.b,d:(o+2)%4}];
+}
+// Đặt ô; được phép "trượt khung" miễn toàn bộ hoa vẫn nằm gọn trong 8×6.
+function tryPlace(grid,tile,x,y,o){
+  const cells=tileCells(tile,x,y,o);
+  for(const c of cells) if(inside(c.x,c.y)&&grid[c.y][c.x]) return {err:"Chỗ này đã có hoa."};
+  const touch=cells.some(c=>DIRS.some(([dx,dy])=>{ const nx=c.x+dx, ny=c.y+dy; return inside(nx,ny)&&grid[ny][nx]; }));
+  if(!touch) return {err:"Ô mới phải chạm cạnh một ô đã đặt."};
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  const occ=[...cells];
+  for(let yy=0;yy<FH;yy++) for(let xx=0;xx<FW;xx++) if(grid[yy][xx]) occ.push({x:xx,y:yy});
+  for(const c of occ){ x0=Math.min(x0,c.x); x1=Math.max(x1,c.x); y0=Math.min(y0,c.y); y1=Math.max(y1,c.y); }
+  if(x1-x0+1>FW||y1-y0+1>FH) return {err:"Không còn vừa khung tủ kính."};
+  const sx = x0<0 ? -x0 : x1>=FW ? FW-1-x1 : 0, sy = y0<0 ? -y0 : y1>=FH ? FH-1-y1 : 0;
+  const g=emptyGrid();
+  for(let yy=0;yy<FH;yy++) for(let xx=0;xx<FW;xx++) if(grid[yy][xx]) g[yy+sy][xx+sx]={...grid[yy][xx]};
+  for(const c of cells) g[c.y+sy][c.x+sx]={t:c.t,d:c.d,id:tile.id};
+  return {grid:g, sx, sy};
+}
+function canPlaceAny(grid,tile){
+  for(let y=-2;y<FH+2;y++) for(let x=-2;x<FW+2;x++) for(let o=0;o<4;o++) if(!tryPlace(grid,tile,x,y,o).err) return true;
+  return false;
+}
+// Mảng lớn nhất của từng loại hoa (nối theo cạnh, không tính chéo).
+function patches(grid){
+  const seen=emptyGrid(), best={};
+  for(const t of TYPES) best[t]={n:0,cells:[]};
+  for(let y=0;y<FH;y++) for(let x=0;x<FW;x++){
+    const c=grid[y][x]; if(!c||seen[y][x]) continue;
+    const st=[[x,y]], cells=[]; seen[y][x]=1;
+    while(st.length){ const [cx,cy]=st.pop(); cells.push(cx+","+cy);
+      for(const [dx,dy] of DIRS){ const nx=cx+dx, ny=cy+dy;
+        if(inside(nx,ny)&&!seen[ny][nx]&&grid[ny][nx]&&grid[ny][nx].t===c.t){ seen[ny][nx]=1; st.push([nx,ny]); } } }
+    if(cells.length>best[c.t].n) best[c.t]={n:cells.length,cells};
+  }
+  return best;
+}
+function scoreBoard(grid){
+  const p=patches(grid), rows={};
+  for(const t of TYPES) rows[t]={n:p[t].n, pts:pts(p[t].n)};
+  return {rows, total:sum(TYPES.map(t=>rows[t].pts))};
+}
+function fundsBonus(funds){
+  const d=Math.abs(funds[0]-funds[1]), w=funds[0]>funds[1]?0:funds[1]>funds[0]?1:null;
+  return {diff:d, winner:w, pts:w===null?0:pts(d)};
+}
+
+function newMatch(names, bot){
+  const st={names, bot:!!bot, log:[], moveNo:0};
+  resetMatch(st); return st;
+}
+function resetMatch(st){
+  st.bag=shuffle(makeTiles()); st.funds=[START_FUNDS,START_FUNDS]; st.round=0; st.result=null; st.last=null;
+  st.boards=[0,1].map(()=>{ const g=emptyGrid(), t=st.bag.pop();
+    g[2][3]={t:t.a,d:0,id:t.id}; g[2][4]={t:t.b,d:2,id:t.id}; return g; });
+  startRound(st);
+}
+function startRound(st){
+  st.round++;
+  st.market=st.bag.splice(-MARKET);
+  st.phase="ready"; st.ready=[false,!!st.bot]; st.auc=null; st.pending=[[],[]]; st.done=[false,false];
+  st.log.push({sys:1,t:`— Vòng ${st.round} —`});
+  st.moveNo++;
+}
+function nextRound(st){
+  if(st.round>=ROUNDS||st.bag.length<MARKET) endGame(st); else startRound(st);
+}
+function noBid(st){
+  if(st.phase!=="auction") return;
+  st.log.push({t:"Không ai mua — 4 ô hoa bị bỏ đi."});
+  st.last={text:"Hết giờ, không ai mua. 4 ô hoa bị bỏ đi."};
+  st.market=[]; st.moveNo++;
+  nextRound(st);
+}
+function endGame(st){
+  const sc=st.boards.map(scoreBoard), fb=fundsBonus(st.funds);
+  const totals=[0,1].map(p=>sc[p].total+(fb.winner===p?fb.pts:0));
+  const w=totals[0]>totals[1]?0:totals[1]>totals[0]?1:null;
+  st.result={sc, fb, totals, winner:w, funds:st.funds.slice()};
+  st.phase="end";
+  st.log.push({sys:1,t: w===null?"Hoà! Cùng vui nhé 🌼":`🏆 ${st.names[w]} thắng với ${totals[w]} điểm!`});
+  st.moveNo++;
+}
+function priceAt(el){ return Math.max(1, START_PRICE-Math.floor(el/STEP_MS)); }
+
+function applyAction(st, p, a){
+  if(!a||typeof a!=="object") return "Hành động không hợp lệ.";
+  const who=st.names[p];
+  if(a.k==="rematch"){
+    if(st.phase!=="end") return "Trận chưa kết thúc.";
+    st.log.push({sys:1,t:"— Trận mới —"}); resetMatch(st); return null;
+  }
+  if(a.k==="ready"){
+    if(st.phase!=="ready") return "Chưa tới lúc đấu giá.";
+    st.ready[p]=true;
+    if(st.ready[0]&&st.ready[1]){ st.phase="auction"; st.auc={start:Date.now()+PREP_MS, buyer:null, price:0}; }
+    st.moveNo++; return null;
+  }
+  if(a.k==="buy"){
+    if(st.phase!=="auction") return "Phiên đấu giá đã đóng.";
+    const el=Date.now()-st.auc.start;
+    if(el<0) return "Chưa bắt đầu!";
+    if(el>=AUC_MS) return "Hết giờ rồi.";
+    const price=priceAt(el);
+    if(st.funds[p]<price) return "Không đủ tiền.";
+    st.funds[p]-=price; st.auc.buyer=p; st.auc.price=price; st.phase="pick";
+    st.last={p,text:`${who} bấm mua với giá $${price}.`};
+    st.log.push({t:`${who} mua với giá $${price}.`});
+    st.moveNo++; return null;
+  }
+  if(a.k==="pick"){
+    if(st.phase!=="pick") return "Không phải lúc chọn hoa.";
+    if(st.auc.buyer!==p) return "Bạn không phải người mua.";
+    const idx=[...new Set(a.idx||[])];
+    if(idx.length!==TAKE||idx.some(i=>!Number.isInteger(i)||i<0||i>=st.market.length)) return "Hãy chọn đúng 3 ô.";
+    st.pending[p]=idx.map(i=>st.market[i]);
+    st.pending[1-p]=st.market.filter((_,i)=>!idx.includes(i));
+    st.market=[]; st.phase="decor"; st.done=[false,false];
+    st.log.push({t:`${who} lấy 3 ô, ${st.names[1-p]} nhận 1 ô miễn phí.`});
+    st.moveNo++; return null;
+  }
+  if(a.k==="place"){
+    if(st.phase!=="decor") return "Không phải lúc trang trí.";
+    if(st.done[p]) return "Bạn đã xếp xong.";
+    const pend=st.pending[p], ops=Array.isArray(a.ops)?a.ops:[];
+    if(ops.length!==pend.length) return "Hãy xếp hết các ô mới.";
+    const used=new Set(); let g=st.boards[p], dropped=0;
+    for(const op of ops){
+      const i=op&&op.i;
+      if(!Number.isInteger(i)||i<0||i>=pend.length||used.has(i)) return "Ô không hợp lệ.";
+      used.add(i);
+      if(op.discard){ if(canPlaceAny(g,pend[i])) return "Ô này vẫn đặt được, không được bỏ."; dropped++; continue; }
+      const r=tryPlace(g,pend[i],op.x|0,op.y|0,((op.o|0)%4+4)%4);
+      if(r.err) return r.err;
+      g=r.grid;
+    }
+    st.boards[p]=g; st.pending[p]=[]; st.done[p]=true;
+    st.log.push({t:`${who} đã trang trí xong${dropped?` (bỏ ${dropped} ô vì hết chỗ)`:""}.`});
+    st.moveNo++;
+    if(st.done[0]&&st.done[1]) nextRound(st);
+    return null;
+  }
+  return "Hành động không hợp lệ.";
+}
+
+function viewFor(st,p){
+  const o=1-p;
+  return {
+    me:p, names:st.names, bot:st.bot, round:st.round, phase:st.phase, funds:st.funds,
+    boards:st.boards, market:st.market, bag:st.bag.length, ready:st.ready, done:st.done,
+    auc: st.auc && {startIn:st.auc.start-Date.now(), buyer:st.auc.buyer, price:st.auc.price},
+    pending:st.pending[p], oppPending:st.pending[o].length,
+    log:st.log.slice(-40), last:st.last, moveNo:st.moveNo, result:st.result
+  };
+}
+
+/* ================= BOT ================= */
+function evalGrid(g){
+  const p=patches(g); let v=0;
+  for(const t of TYPES){ const n=p[t].n; v+=pts(n)+0.4*n+(n>=2&&[2,5,8,11].includes(n)?0.3:0); }
+  let adj=0;
+  for(let y=0;y<FH;y++) for(let x=0;x<FW;x++){ const c=g[y][x]; if(!c) continue;
+    if(x+1<FW&&g[y][x+1]&&g[y][x+1].t===c.t) adj++; if(y+1<FH&&g[y+1][x]&&g[y+1][x].t===c.t) adj++; }
+  return v+adj*0.12;
+}
+function bestPlace(g,tile){
+  let best=null;
+  for(let y=-2;y<FH+2;y++) for(let x=-2;x<FW+2;x++) for(let o=0;o<4;o++){
+    const r=tryPlace(g,tile,x,y,o); if(r.err) continue;
+    const v=evalGrid(r.grid)+Math.random()*0.05;
+    if(!best||v>best.v) best={x,y,o,grid:r.grid,v};
+  }
+  return best;
+}
+// Xếp tham lam: mỗi bước chọn ô + vị trí tốt nhất. Trả về các lệnh và điểm tăng thêm.
+function greedyPlan(grid,tiles){
+  let g=grid; const base=evalGrid(g), ops=[], left=tiles.map((t,i)=>({t,i}));
+  while(left.length){
+    let pick=null;
+    for(const it of left){ const b=bestPlace(g,it.t); if(b&&(!pick||b.v>pick.b.v)) pick={it,b}; }
+    if(!pick){ for(const it of left) ops.push({i:it.i,discard:1}); break; }
+    ops.push({i:pick.it.i,x:pick.b.x,y:pick.b.y,o:pick.b.o}); g=pick.b.grid;
+    left.splice(left.indexOf(pick.it),1);
+  }
+  return {ops, gain:evalGrid(g)-base};
+}
+function botPick(st,p){
+  const m=st.market; let best=null;
+  for(let leave=0;leave<m.length;leave++){
+    const mine=m.filter((_,i)=>i!==leave);
+    const v=greedyPlan(st.boards[p],mine).gain-0.5*greedyPlan(st.boards[1-p],[m[leave]]).gain;
+    if(!best||v>best.v) best={v,idx:m.map((_,i)=>i).filter(i=>i!==leave)};
+  }
+  return best.idx;
+}
+// Giá tối đa bot chịu trả (0 = không mua).
+function botMaxPrice(st,p){
+  const m=st.market, o=1-p;
+  const single=m.map(t=>greedyPlan(st.boards[p],[t]).gain);
+  const oppSingle=m.map(t=>greedyPlan(st.boards[o],[t]).gain);
+  let buy=-Infinity;
+  for(let leave=0;leave<m.length;leave++) buy=Math.max(buy, greedyPlan(st.boards[p],m.filter((_,i)=>i!==leave)).gain);
+  const oppLeave=oppSingle.indexOf(Math.min(...oppSingle));  // đối thủ sẽ bỏ lại ô họ ít cần nhất
+  const oppBuy=greedyPlan(st.boards[o],m.filter((_,i)=>i!==oppLeave)).gain;
+  const adv=(buy-single[oppLeave])+0.5*(oppBuy-oppSingle[Math.max(0,single.indexOf(Math.min(...single)))]);
+  const roundsLeft=ROUNDS-st.round+1, spare=st.funds[p]-st.funds[o];
+  let price=Math.round(adv*0.65+(Math.random()-0.5)*1.4+(st.funds[p]>roundsLeft*3?0.6:0)+(spare>6?0.5:0)-(spare<-4?0.6:0));
+  return Math.max(0,Math.min(START_PRICE,price,st.funds[p]));
+}
+let botTimer=null, botKey="", aucTimer=null, aucKey="";
+function maybeBot(){
+  if(!state||!state.bot) return;
+  const st=state, key=`${st.moveNo}|${st.phase}`;
+  if(key===botKey) return;
+  botKey=key; clearTimeout(botTimer);
+  if(st.phase==="auction"&&st.auc.buyer===null){
+    const mp=botMaxPrice(st,1); if(!mp) return;
+    const at=(START_PRICE-mp)*STEP_MS+300+Math.random()*2300;
+    botTimer=setTimeout(()=>{ if(state.phase==="auction"&&!applyAction(state,1,{k:"buy"})) broadcast(); }, Math.max(0,st.auc.start-Date.now())+at);
+  } else if(st.phase==="pick"&&st.auc.buyer===1){
+    botTimer=setTimeout(()=>{ if(state.phase==="pick"){ applyAction(state,1,{k:"pick",idx:botPick(state,1)}); broadcast(); } }, 1200);
+  } else if(st.phase==="decor"&&!st.done[1]){
+    botTimer=setTimeout(()=>{ if(state.phase==="decor"&&!state.done[1]){
+      const err=applyAction(state,1,{k:"place",ops:greedyPlan(state.boards[1],state.pending[1]).ops}); if(err) console.warn("bot:",err); broadcast(); } }, 1400);
+  }
+}
+// Chủ phòng giữ đồng hồ đấu giá: hết 15 giây mà chưa ai mua thì bỏ 4 ô.
+function syncAuction(){
+  if(!state||state.phase!=="auction"){ clearTimeout(aucTimer); aucKey=""; return; }
+  const key=state.round+"|"+state.auc.start; if(key===aucKey) return;
+  aucKey=key; clearTimeout(aucTimer);
+  aucTimer=setTimeout(()=>{ if(state.phase==="auction"){ noBid(state); broadcast(); } }, state.auc.start+AUC_MS-Date.now()+200);
+}
+
+/* ================= NETWORK ================= */
+const PREFIX="floristry-vh-";
+let peer=null, conn=null, guestConn=null, isHost=false, myName="", guestName="", roomCode="", state=null, view=null, joinTimer=null;
+
+const $ = id => document.getElementById(id);
+function toast(t){ const el=$("toast"); el.textContent=t; el.classList.add("show"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),2600); }
+function lobbyMsg(t){ $("lobbyMsg").textContent=t||""; }
+function genCode(){ const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; const r=new Uint32Array(5); crypto.getRandomValues(r); for(const x of r) s+=A[x%A.length]; return s; }
+function roomLink(){ return location.origin+location.pathname+"?room="+roomCode; }
+function getName(){
+  const n=$("nameInput").value.trim();
+  if(!n){ lobbyMsg("Nhập tên trước đã nhé 🌷"); $("nameInput").focus(); return null; }
+  try{ localStorage.setItem("floristry-name",n); }catch(e){}
+  return n;
+}
+function lockLobby(b){ $("createBtn").disabled=b; $("joinBtn").disabled=b; $("botBtn").disabled=b; }
+
+function playBot(){
+  const n=getName(); if(!n) return;
+  myName=n; isHost=true; roomCode="";
+  state=newMatch([myName,"Tiệm hoa máy"], true);
+  startGameUI(); broadcast();
+}
+function createRoom(){
+  const n=getName(); if(!n) return;
+  if(typeof Peer==="undefined"){ lobbyMsg("Không tải được thư viện kết nối, kiểm tra mạng."); return; }
+  myName=n; isHost=true; lockLobby(true); lobbyMsg("");
+  roomCode=genCode();
+  peer=new Peer(PREFIX+roomCode);
+  peer.on("open",()=>{
+    $("lobbyMain").classList.add("hidden"); $("lobbyWait").classList.remove("hidden");
+    $("waitCode").textContent=roomCode; $("waitLink").textContent=roomLink();
+    history.replaceState(null,"","?room="+roomCode+"&host=1");
+  });
+  peer.on("connection", onGuestConn);
+  peer.on("disconnected",()=>{ if(!peer.destroyed) peer.reconnect(); });
+  peer.on("error",e=>{
+    if(e.type==="unavailable-id"){ peer.destroy(); isHost=false; createRoom(); return; }
+    if(e.type==="peer-unavailable") return;
+    console.warn(e); toast("Lỗi kết nối: "+e.type); lockLobby(false);
+  });
+}
+function onGuestConn(c){
+  c.on("data", msg=>{
+    if(!msg||typeof msg!=="object") return;
+    if(msg.t==="hello"){
+      if(guestConn && guestConn!==c && guestConn.open){ c.send({t:"full"}); setTimeout(()=>c.close(),300); return; }
+      guestConn=c; guestName=String(msg.name||"Khách").slice(0,16);
+      if(!state){ state=newMatch([myName,guestName]); startGameUI(); }
+      else { state.names[1]=guestName; state.log.push({t:`${guestName} đã vào lại phòng.`}); }
+      broadcast();
+    } else if(msg.t==="act" && c===guestConn){
+      const err=applyAction(state,1,msg.a||{});
+      if(err) c.send({t:"err",msg:err});
+      broadcast();
+    }
+  });
+  c.on("close",()=>{ if(c===guestConn){ guestConn=null; if(state){ state.log.push({t:`${guestName} mất kết nối…`}); broadcast(); } } });
+}
+function broadcast(){
+  syncAuction();
+  onView(viewFor(state,0));
+  if(guestConn && guestConn.open) guestConn.send({t:"state", view:viewFor(state,1)});
+  maybeBot();
+}
+function joinRoom(){
+  const n=getName(); if(!n) return;
+  const code=$("codeInput").value.trim().toUpperCase();
+  if(code.length!==5){ lobbyMsg("Mã phòng gồm 5 ký tự."); return; }
+  if(typeof Peer==="undefined"){ lobbyMsg("Không tải được thư viện kết nối, kiểm tra mạng."); return; }
+  myName=n; roomCode=code; isHost=false; lockLobby(true); lobbyMsg("Đang kết nối…");
+  $("lobbyMsg").style.color="var(--muted)";
+  if(peer) peer.destroy();
+  peer=new Peer();
+  peer.on("open",()=>connectToHost());
+  peer.on("error",e=>{
+    $("lobbyMsg").style.color="";
+    if(e.type==="peer-unavailable"){ clearTimeout(joinTimer); if(!view){ lobbyMsg("Không tìm thấy phòng "+roomCode+". Kiểm tra lại mã."); lockLobby(false); } else showDisconnected(); }
+    else { console.warn(e); lobbyMsg("Lỗi kết nối: "+e.type); lockLobby(false); }
+  });
+  peer.on("disconnected",()=>{ if(!peer.destroyed) peer.reconnect(); });
+}
+function connectToHost(){
+  conn=peer.connect(PREFIX+roomCode,{reliable:true});
+  clearTimeout(joinTimer);
+  joinTimer=setTimeout(()=>{ if(!view){ lobbyMsg("Kết nối quá lâu. Chủ phòng còn mở tab không?"); lockLobby(false); } },15000);
+  conn.on("open",()=>{ conn.send({t:"hello",name:myName}); });
+  conn.on("data",msg=>{
+    if(!msg) return;
+    if(msg.t==="state"){ clearTimeout(joinTimer); if($("game").classList.contains("hidden")) startGameUI(); if(overlayId==="dc") closeOverlay(); onView(msg.view); }
+    else if(msg.t==="err") toast(msg.msg);
+    else if(msg.t==="full"){ lobbyMsg("Phòng đã đủ 2 người."); lockLobby(false); }
+  });
+  conn.on("close",()=>{ if(view) showDisconnected(); });
+}
+function showDisconnected(){
+  openOverlay(`<h2>Mất kết nối</h2><p class="tag" style="text-align:center">Không liên lạc được với chủ phòng.</p>
+    <div class="row"><button class="btn green" id="rejoinBtn">Kết nối lại</button></div>`, "dc");
+  $("rejoinBtn").onclick=()=>{ $("rejoinBtn").disabled=true; $("rejoinBtn").textContent="Đang thử…"; connectToHost(); };
+}
+function sendAction(a){
+  if(isHost){ const err=applyAction(state,0,a); if(err) toast(err); broadcast(); }
+  else if(conn && conn.open) conn.send({t:"act",a});
+  else toast("Chưa kết nối với chủ phòng.");
+}
+
+/* ================= UI ================= */
+let overlayId=null;
+function openOverlay(html,id){ $("modal").innerHTML=html; $("overlay").classList.remove("hidden"); overlayId=id; }
+function closeOverlay(){ $("overlay").classList.add("hidden"); overlayId=null; }
+$("overlay").addEventListener("click",e=>{ if(e.target.id==="overlay" && overlayId==="rules") closeOverlay(); });
+
+function startGameUI(){
+  $("lobby").classList.add("hidden"); $("game").classList.remove("hidden");
+  $("roomInfo").innerHTML = roomCode ? `Phòng <b>${roomCode}</b>` : "Chơi với máy";
+  if(!isHost && roomCode) history.replaceState(null,"","?room="+roomCode);
+}
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const flHTML = t => `<span class="fl f-${t}" title="${INFO[t].n}">${INFO[t].e}</span>`;
+// Domino hiển thị theo hướng o (0: A|B, 1: A trên B, 2: B|A, 3: B trên A)
+function domHTML(tile,o=0,cls="",extra=""){
+  const v=o%2===1, [p,q]=o>=2?[tile.b,tile.a]:[tile.a,tile.b];
+  return `<div class="dom ${v?"v":""} ${cls}" ${extra}><span class="h">${flHTML(p)}</span><span class="h">${flHTML(q)}</span></div>`;
+}
+
+// Trạng thái cục bộ: chọn ô ở chợ, xếp nháp vào tủ kính
+let pickSel=new Set(), pickKey="";
+let stage=null, stageKey="", selTile=0, rot=0, hoverXY=null, hlType=null, freshIds=new Set();
+let aucLocalStart=0, aucTick=null;
+
+function onView(v){
+  const prev=view; view=v;
+  const pk=`${v.round}|${v.phase}`;
+  if(pk!==pickKey){ pickKey=pk; pickSel=new Set(); }
+  const sk=`${v.round}|${v.phase}|${v.pending.map(t=>t.id).join(",")}|${v.done[v.me]}`;
+  if(sk!==stageKey){ stageKey=sk; stage={ops:[], grid:v.boards[v.me]}; selTile=0; rot=0; }
+  if(v.phase==="auction"&&v.auc) aucLocalStart=performance.now()+v.auc.startIn;
+  // ô vừa xuất hiện trên bàn (của đối thủ, hoặc bị chủ phòng chèn) → hiệu ứng pop một lần
+  const ids=b=>new Set(b.flat().filter(Boolean).map(c=>c.id));
+  freshIds=new Set();
+  if(prev) v.boards.forEach((b,i)=>{ const old=ids(prev.boards[i]); for(const id of ids(b)) if(!old.has(id)&&i!==v.me) freshIds.add(id); });
+  render();
+  freshIds=new Set();
+  if(v.phase==="end") showEnd(); else if(overlayId==="end") closeOverlay();
+}
+
+function stagedGrid(){
+  let g=view.boards[view.me];
+  for(const op of stage.ops) if(!op.discard) g=tryPlace(g,view.pending[op.i],op.x,op.y,op.o).grid;
+  return g;
+}
+function unusedTiles(){ const used=new Set(stage.ops.map(o=>o.i)); return view.pending.map((t,i)=>i).filter(i=>!used.has(i)); }
+
+function render(){
+  const v=view, me=v.me, o=1-me;
+  $("roundNo").textContent=Math.min(v.round,ROUNDS);
+  $("bagInfo").textContent=`· túi còn ${v.bag} ô`;
+  $("lastMove").innerHTML = v.last ? `<div class="lastMove">${esc(v.last.text)}</div>` : "";
+  renderAuction();
+  $("meTitle").innerHTML=`🪟 Tủ kính của ${esc(v.names[me])} (bạn)<span class="sp"></span><span class="money">💰 $${v.funds[me]}</span>`;
+  $("oppTitle").innerHTML=`🪟 ${esc(v.names[o])}<span class="sp"></span><span class="sub">${oppStatus()}</span><span class="money">💰 $${v.funds[o]}</span>`;
+  renderMyBoard(); renderTray();
+  $("oppFrame").innerHTML=boardHTML(v.boards[o], {mini:true, hl:hlType&&patches(v.boards[o])[hlType].cells});
+  $("oppFrame").style.gridTemplateColumns=`repeat(${FW},var(--cs))`;
+  renderScores();
+  $("log").innerHTML = v.log.slice().reverse().map(l=>`<div class="${l.sys?"sys":""}">${esc(l.t)}</div>`).join("");
+}
+function oppStatus(){
+  const v=view, o=1-v.me;
+  if(v.phase==="decor") return v.done[o]?"✔ đã xếp xong":`đang xếp ${v.oppPending} ô…`;
+  if(v.phase==="ready") return v.ready[o]?"✔ sẵn sàng":"chưa sẵn sàng";
+  return "";
+}
+
+function renderAuction(){
+  const v=view, me=v.me, el=$("auction");
+  clearInterval(aucTick); aucTick=null;
+  if(v.phase==="ready"){
+    const r=v.ready[me];
+    el.innerHTML=`<div class="tiles">${v.market.map(t=>domHTML(t)).join("")}</div>
+      <div class="readyRow">
+        <button class="btn gold" id="readyBtn" ${r?"disabled":""}>${r?"Đã sẵn sàng":"🔔 Sẵn sàng đấu giá"}</button>
+        <span class="chip ${r?"ok":""}">${esc(v.names[me])} ${r?"✔":"…"}</span>
+        <span class="chip ${v.ready[1-me]?"ok":""}">${esc(v.names[1-me])} ${v.ready[1-me]?"✔":"…"}</span>
+      </div>
+      <div class="small" style="margin-top:8px">Giá bắt đầu $5, giảm $1 mỗi 3 giây (tối thiểu $1). Ai bấm MUA trước lấy 3 ô, người kia được ô còn lại miễn phí.</div>`;
+    $("readyBtn").onclick=()=>sendAction({k:"ready"});
+  } else if(v.phase==="auction"){
+    el.innerHTML=`<div class="tiles">${v.market.map(t=>domHTML(t)).join("")}</div>
+      <div class="auc">
+        <div class="clock" id="clock"><span id="clockTxt">$5</span></div>
+        <div>
+          <div class="steps" id="steps">${[5,4,3,2,1].map(p=>`<span data-p="${p}">$${p}</span>`).join("")}</div>
+          <div class="row" style="margin-top:10px"><button class="btn buyBtn" id="buyBtn">MUA</button></div>
+        </div>
+      </div>`;
+    $("buyBtn").onclick=()=>sendAction({k:"buy"});
+    const tick=()=>{
+      const elp=performance.now()-aucLocalStart, c=$("clock"); if(!c) return;
+      if(elp<0){ $("clockTxt").innerHTML=`${Math.ceil(-elp/1000)}<small>chuẩn bị</small>`; c.style.setProperty("--p",1); $("buyBtn").disabled=true; return; }
+      const left=Math.max(0,AUC_MS-elp), price=priceAt(elp);
+      c.style.setProperty("--p",left/AUC_MS);
+      $("clockTxt").innerHTML=left>0?`$${price}<small>${(left/1000).toFixed(1)}s</small>`:`⏱<small>hết giờ</small>`;
+      document.querySelectorAll("#steps span").forEach(s=>s.classList.toggle("on",+s.dataset.p===price&&left>0));
+      const b=$("buyBtn"), poor=v.funds[me]<price;
+      b.disabled=left<=0||poor; b.textContent=poor?`Không đủ $${price}`:`MUA · $${price}`;
+    };
+    tick(); aucTick=setInterval(tick,100);
+  } else if(v.phase==="pick"){
+    const mine=v.auc.buyer===me;
+    el.innerHTML=`<div class="tiles">${v.market.map((t,i)=>domHTML(t,0,`${mine?"click":""} ${pickSel.has(i)?"pick":""}`,`data-pk="${i}"`)).join("")}</div>
+      <div class="readyRow">${mine
+        ?`<span class="hint">Chọn 3 ô muốn lấy (${pickSel.size}/3). Ô còn lại thuộc về ${esc(v.names[1-me])}.</span>
+          <button class="btn green" id="pickBtn" ${pickSel.size===3?"":"disabled"}>Lấy 3 ô này</button>`
+        :`<span class="hint">${esc(v.names[1-me])} đã mua, đang chọn 3 ô<span class="dots"></span></span>`}</div>`;
+    if(mine) $("pickBtn").onclick=()=>sendAction({k:"pick",idx:[...pickSel]});
+  } else if(v.phase==="decor"){
+    el.innerHTML=`<div class="hint">${v.done[me]?`Bạn đã xếp xong. Chờ ${esc(v.names[1-me])}…`:"Trang trí: đặt các ô mới vào tủ kính của bạn (bên dưới)."}</div>`;
+  } else {
+    el.innerHTML=`<div class="readyRow"><span class="hint">Trận đã kết thúc.</span><button class="btn green" id="reopenBtn">Xem kết quả</button></div>`;
+    $("reopenBtn").onclick=showEnd;
+  }
+}
+
+function boardHTML(g,{mini=false,margin=false,hl=null}={}){
+  const r0=margin?-1:0, r1=margin?FH:FH-1, c0=margin?-1:0, c1=margin?FW:FW-1;
+  const hls=new Set(hl||[]);
+  let h="";
+  for(let y=r0;y<=r1;y++) for(let x=c0;x<=c1;x++){
+    const inn=inside(x,y), c=inn?g[y][x]:null;
+    let cls="cell "+(inn?"in":"out"), body="";
+    if(c){ cls+=` t d${c.d}`; body=flHTML(c.t); if(freshIds.has(c.id)) cls+=" new"; if(hls.has(x+","+y)) cls+=" hl"; }
+    h+=`<div class="${cls}" ${mini?"":`data-x="${x}" data-y="${y}"`}>${body}</div>`;
+  }
+  return h;
+}
+function ghostFor(x,y){
+  const i=unusedTiles()[selTile]; if(i===undefined) return null;
+  const tile=view.pending[i], g=stagedGrid(), r=tryPlace(g,tile,x,y,rot);
+  return {cells:tileCells(tile,x,y,rot), ok:!r.err, err:r.err};
+}
+function renderMyBoard(){
+  const v=view, placing=v.phase==="decor"&&!v.done[v.me]&&unusedTiles().length>0;
+  const g=placing||v.phase==="decor"?stagedGrid():v.boards[v.me];
+  const f=$("myFrame");
+  f.classList.toggle("placing",placing);
+  f.style.gridTemplateColumns=`repeat(${FW+2},var(--cs))`;
+  f.innerHTML=boardHTML(g,{margin:true, hl:hlType&&patches(g)[hlType].cells});
+  paintGhost();
+}
+// Vẽ bóng ô đang đặt bằng cách đổi class, không thay DOM (để cú click không bị mất).
+function paintGhost(){
+  const f=$("myFrame");
+  f.querySelectorAll(".gh").forEach(c=>{ c.classList.remove("gh","bad"); const q=c.querySelector(".ghf"); if(q) q.remove(); });
+  if(!view||view.phase!=="decor"||view.done[view.me]||!hoverXY) return;
+  const gh=ghostFor(hoverXY[0],hoverXY[1]); if(!gh) return;
+  for(const c of gh.cells){
+    const el=f.querySelector(`[data-x="${c.x}"][data-y="${c.y}"]`); if(!el) continue;
+    el.classList.add("gh"); if(!gh.ok) el.classList.add("bad");
+    if(!el.classList.contains("t")) el.insertAdjacentHTML("beforeend",flHTML(c.t).replace('class="fl ','class="fl ghf '));
+  }
+}
+function renderTray(){
+  const v=view, el=$("tray");
+  if(v.phase!=="decor"||v.done[v.me]){
+    el.innerHTML=`<div class="small">${v.phase==="decor"?"Đã xếp xong vòng này.":"Ô mới mua sẽ hiện ở đây để bạn xếp vào tủ kính."}<br><br>
+      Khung ${FW}×${FH}. Ô mới phải chạm cạnh một ô cũ. Đặt ra mép ngoài sẽ tự trượt khung nếu còn chỗ.</div>`;
+    return;
+  }
+  const un=unusedTiles();
+  if(selTile>=un.length) selTile=0;
+  const cur=un.length?v.pending[un[selTile]]:null;
+  const cantFit=cur&&!canPlaceAny(stagedGrid(),cur);
+  el.innerHTML=`<div class="ptitle" style="margin:0">🧺 Ô mới <span class="sub">${un.length}/${v.pending.length} chưa xếp</span></div>
+    <div class="tiles">${v.pending.map((t,i)=>{ const k=un.indexOf(i);
+      return k<0?domHTML(t,0,"used"):domHTML(t,k===selTile?rot:0,`click ${k===selTile?"sel":""}`,`data-tr="${k}"`); }).join("")}</div>
+    <div class="hint ${cantFit?"warn":""}">${un.length
+      ?(cantFit?"Ô này không còn chỗ đặt — bạn phải bỏ nó.":"Rê chuột / chạm vào tủ kính để đặt. Chuột phải hoặc phím R để xoay.")
+      :"Đã xếp hết. Bấm Xác nhận."}</div>
+    <div class="tools">
+      ${un.length?`<button class="btn ghost" id="rotBtn">⟳ Xoay</button>`:""}
+      ${cantFit?`<button class="btn ghost" id="dropBtn">🗑 Bỏ ô này</button>`:""}
+      ${stage.ops.length?`<button class="btn ghost" id="undoBtn">↶ Hoàn tác</button>`:""}
+      <button class="btn green" id="confirmBtn" ${un.length?"disabled":""}>✔ Xác nhận</button>
+    </div>`;
+  if($("rotBtn")) $("rotBtn").onclick=rotate;
+  if($("dropBtn")) $("dropBtn").onclick=()=>{ stage.ops.push({i:un[selTile],discard:1}); selTile=0; rot=0; render(); };
+  if($("undoBtn")) $("undoBtn").onclick=()=>{ stage.ops.pop(); render(); };
+  $("confirmBtn").onclick=()=>sendAction({k:"place",ops:stage.ops});
+}
+function rotate(){ rot=(rot+1)%4; paintGhost(); renderTray(); }
+
+function renderScores(){
+  const v=view, me=v.me, o=1-me, sm=scoreBoard(v.phase==="decor"?stagedGrid():v.boards[me]), so=scoreBoard(v.boards[o]);
+  const fb=fundsBonus(v.funds), fm=fb.winner===me?fb.pts:0, fo=fb.winner===o?fb.pts:0;
+  $("scoreBox").innerHTML=`<table class="stbl">
+    <tr><th>Mảng lớn nhất</th><th>Bạn</th><th>${esc(v.names[o])}</th></tr>
+    ${TYPES.map(t=>`<tr class="fr" data-hl="${t}"><td>${INFO[t].e} ${INFO[t].n}</td>
+      <td>${sm.rows[t].n} → <span class="pt">${sm.rows[t].pts}</span></td><td>${so.rows[t].n} → <span class="pt">${so.rows[t].pts}</span></td></tr>`).join("")}
+    <tr><td>💰 Chênh tiền (${fb.diff})</td><td class="pt">${fm}</td><td class="pt">${fo}</td></tr>
+    <tr class="tot"><td>Tổng</td><td>${sm.total+fm}</td><td>${so.total+fo}</td></tr></table>
+    <div class="small" style="margin-top:4px">Rê chuột lên một loại hoa để tô sáng mảng lớn nhất.</div>`;
+}
+
+/* ---- events ---- */
+document.addEventListener("click",e=>{
+  if(!view) return;
+  const pk=e.target.closest("[data-pk]"), tr=e.target.closest("[data-tr]"), cell=e.target.closest("#myFrame [data-x]");
+  if(pk && view.phase==="pick" && view.auc.buyer===view.me){
+    const i=+pk.dataset.pk;
+    if(pickSel.has(i)) pickSel.delete(i); else if(pickSel.size<TAKE) pickSel.add(i); else toast("Chỉ lấy 3 ô thôi.");
+    renderAuction();
+  } else if(tr){
+    const k=+tr.dataset.tr; if(k!==selTile){ selTile=k; rot=0; } else rot=(rot+1)%4;
+    renderMyBoard(); renderTray();
+  } else if(cell && view.phase==="decor" && !view.done[view.me]){
+    const x=+cell.dataset.x, y=+cell.dataset.y, un=unusedTiles(); if(!un.length) return;
+    const gh=ghostFor(x,y);
+    if(!gh.ok){ toast(gh.err); return; }
+    stage.ops.push({i:un[selTile],x,y,o:rot}); selTile=0; rot=0; hoverXY=null;
+    freshIds=new Set([view.pending[stage.ops.at(-1).i].id]); render(); freshIds=new Set();
+  }
+});
+$("myFrame").addEventListener("mouseover",e=>{
+  const c=e.target.closest("[data-x]"); if(!c||!view||view.phase!=="decor") return;
+  const k=[+c.dataset.x,+c.dataset.y];
+  if(!hoverXY||hoverXY[0]!==k[0]||hoverXY[1]!==k[1]){ hoverXY=k; paintGhost(); }
+});
+$("myFrame").addEventListener("mouseleave",()=>{ if(hoverXY){ hoverXY=null; paintGhost(); } });
+$("myFrame").addEventListener("contextmenu",e=>{ if(view&&view.phase==="decor"){ e.preventDefault(); rotate(); } });
+document.addEventListener("keydown",e=>{
+  if(!view||e.target.tagName==="INPUT") return;
+  if((e.key==="r"||e.key==="R")&&view.phase==="decor") rotate();
+  if(e.key===" "&&view.phase==="auction"){ e.preventDefault(); const b=$("buyBtn"); if(b&&!b.disabled) b.click(); }
+});
+$("scoreBox").addEventListener("mouseover",e=>{ const r=e.target.closest("[data-hl]"); const t=r?r.dataset.hl:null; if(t!==hlType){ hlType=t; render(); } });
+$("scoreBox").addEventListener("mouseleave",()=>{ if(hlType){ hlType=null; render(); } });
+
+function showEnd(){
+  const v=view, r=v.result; if(!r) return;
+  const me=v.me, o=1-me, S=r.sc;
+  const title = r.winner===null ? "Hoà rồi! 🌼" : r.winner===me ? "🏆 Bạn thắng!" : `${esc(v.names[r.winner])} thắng`;
+  openOverlay(`
+    <h2>${title}</h2>
+    <p class="tag" style="text-align:center;margin:0">Tủ kính nào duyên dáng nhất?</p>
+    <table>
+      <tr><th></th><th>${esc(v.names[me])}</th><th>${esc(v.names[o])}</th></tr>
+      ${TYPES.map(t=>`<tr><td>${INFO[t].e} ${INFO[t].n}</td><td>${S[me].rows[t].n} hoa · <b>${S[me].rows[t].pts}</b></td><td>${S[o].rows[t].n} hoa · <b>${S[o].rows[t].pts}</b></td></tr>`).join("")}
+      <tr><td>💰 Tiền ($${r.funds[me]} vs $${r.funds[o]})</td><td><b>${r.fb.winner===me?r.fb.pts:0}</b></td><td><b>${r.fb.winner===o?r.fb.pts:0}</b></td></tr>
+      <tr class="total"><td>Tổng</td><td>${r.totals[me]}</td><td>${r.totals[o]}</td></tr>
+    </table>
+    <div class="row">
+      <button class="btn green" id="againBtn">Chơi ván mới</button>
+      <button class="btn ghost" id="viewBoardBtn">Xem bàn</button>
+    </div>`, "end");
+  $("againBtn").onclick=()=>sendAction({k:"rematch"});
+  $("viewBoardBtn").onclick=closeOverlay;
+}
+
+function showRules(){
+  openOverlay(`<h2>Luật chơi Floristry</h2><div class="rules">
+    <p>Hai chủ tiệm hoa đấu giá ở chợ hoa Aalsmeer rồi trang trí tủ kính. Sau <b>10 vòng</b>, ai nhiều điểm hơn thắng.</p>
+    <h3>Mỗi vòng</h3>
+    <ul>
+      <li><b>Chợ:</b> rút 4 ô hoa (mỗi ô domino có 2 bông, có thể khác loại).</li>
+      <li><b>Đấu giá kiểu Hà Lan:</b> cả hai bấm Sẵn sàng. Đồng hồ chạy 15 giây, giá bắt đầu $5 và giảm $1 mỗi 3 giây. Ai bấm <b>MUA</b> trước trả giá hiện tại, chọn 3 ô; người kia nhận ô còn lại miễn phí. Không ai mua thì bỏ cả 4 ô.</li>
+      <li><b>Trang trí:</b> cả hai cùng lúc đặt ô mới vào tủ kính ${FW}×${FH} của mình. Được xoay; phải chạm trọn cạnh một ô đã có (không tính chéo); không được di chuyển ô cũ. Được trượt khung bất cứ lúc nào (đặt ra mép ngoài để trượt). Không còn chỗ thì phải bỏ ô.</li>
+    </ul>
+    <h3>Tính điểm cuối trận</h3>
+    <ul>
+      <li>Mỗi loại hoa chỉ tính <b>mảng lớn nhất</b>: 3–5 bông = 1, 6–8 = 3, 9–11 = 6, 12+ = 10 điểm.</li>
+      <li>Mỗi người bắt đầu với $${START_FUNDS}. Người nhiều tiền hơn được điểm theo mức chênh lệch với cùng bảng trên.</li>
+      <li>Hoà thì… cùng vui, hoặc chơi lại!</li>
+    </ul>
+    </div><div class="row"><button class="btn green" id="closeRules">Đã hiểu</button></div>`, "rules");
+  $("closeRules").onclick=closeOverlay;
+}
+
+/* ================= BOOT ================= */
+$("createBtn").onclick=createRoom;
+$("joinBtn").onclick=joinRoom;
+$("botBtn").onclick=playBot;
+$("rulesBtn0").onclick=showRules;
+$("rulesBtn").onclick=()=>{ const prev=overlayId; showRules(); if(prev==="end") $("closeRules").onclick=showEnd; };
+$("copyBtn").onclick=()=>{ navigator.clipboard.writeText(roomLink()).then(()=>toast("Đã sao chép link!"),()=>toast("Không sao chép được, hãy copy thủ công.")); };
+$("codeInput").addEventListener("keydown",e=>{ if(e.key==="Enter") joinRoom(); });
+try{ const n=localStorage.getItem("floristry-name"); if(n) $("nameInput").value=n; }catch(e){}
+const qs=new URLSearchParams(location.search);
+if(qs.get("room") && !qs.get("host")) $("codeInput").value=qs.get("room").toUpperCase();
+</script>
+</body>
+</html>
