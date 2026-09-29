@@ -1,17 +1,19 @@
 # 💐 Floristry
 
-Game **Floristry** (David Gordon & TAM, Uncommons Publishing) cho 2 người, chơi ngay trên trình duyệt: đấu giá hoa kiểu Hà Lan rồi xếp domino hoa vào tủ kính.
+Game **Floristry** (David Gordon & TAM, Uncommons Publishing) cho 2 người, chơi ngay trên trình duyệt: trả giá mua hoa rồi xếp domino hoa vào tủ kính.
 
 ## Chế độ chơi
 - **Chơi với máy**: nhập tên, bấm *Chơi với máy*.
 - **Online 1 đấu 1**: bấm *Tạo phòng*, gửi mã hoặc link cho bạn bè; bạn bè nhập mã và bấm *Vào phòng*.
-  Người tạo phòng phải **giữ tab mở**, vì máy chủ phòng giữ trạng thái và chạy đồng hồ đấu giá.
+  Người tạo phòng phải **giữ tab mở**, vì máy chủ phòng giữ trạng thái ván chơi.
 
-## Luật tóm tắt (theo rulebook v1.6)
+## Luật tóm tắt (theo rulebook v1.6, riêng phần đấu giá là luật nhà)
 10 vòng, mỗi vòng:
 1. **Chợ**: rút 4 ô domino hoa (2 bông mỗi ô, có thể khác loại).
-2. **Đấu giá**: cả hai bấm *Sẵn sàng*. Trong 15 giây, giá bắt đầu $5 và giảm $1 mỗi 3 giây.
-   Ai bấm **MUA** trước trả giá hiện tại và chọn 3 ô; người kia nhận ô còn lại miễn phí. Không ai mua thì bỏ cả 4 ô.
+2. **Trả giá kín**: mỗi người chọn giá $1–$10 rồi bấm *Chốt*. Ai trả cao hơn mất số tiền đó và chọn 3 ô;
+   người kia **không mất tiền** và nhận ô còn lại. Hoà giá: ai vừa lấy 3 ô ở lần đấu trước thì thua;
+   hoà ngay lần đấu đầu tiên của trận thì đấu lại.
+   (Bản gốc dùng đấu giá kiểu Hà Lan có đồng hồ 15 giây trên app.)
 3. **Trang trí**: cả hai cùng lúc đặt ô mới vào tủ kính. Được xoay, phải chạm cạnh ô cũ, không được dời ô cũ.
 
 Điểm: mỗi loại hoa chỉ tính mảng lớn nhất: 3–5 = 1, 6–8 = 3, 9–11 = 6, 12+ = 10.
@@ -23,7 +25,7 @@ Mỗi người bắt đầu với $30; ai nhiều tiền hơn cuối trận đư
 - Ô không còn chỗ đặt thì phải bỏ.
 
 ## Cách bấm
-- Đấu giá: nút **MUA** (hoặc phím Space).
+- Trả giá: bấm ô $1–$10 (hoặc phím 1–9, 0 = $10), rồi **Chốt giá** (hoặc Enter).
 - Trang trí: chọn ô trong giỏ, rê chuột lên tủ kính để xem trước (xanh = hợp lệ), bấm để đặt.
   Xoay bằng nút ⟳, chuột phải, phím R, hoặc bấm lại vào ô đang chọn. Có *Hoàn tác* trước khi *Xác nhận*.
 - Rê chuột lên một loại hoa ở bảng điểm để tô sáng mảng lớn nhất.

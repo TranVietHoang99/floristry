@@ -105,19 +105,12 @@ header .sp{flex:1}
 .dom .who{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:.75rem;font-weight:800;color:var(--muted);white-space:nowrap}
 .tiles{display:flex;flex-wrap:wrap;gap:12px;align-items:center;min-height:62px}
 
-/* auction */
-.auc{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:12px}
-.clock{
-  width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;position:relative;
-  background:conic-gradient(var(--pink) calc(var(--p,1)*360deg), #f3dfe5 0);
-}
-.clock:before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--panel)}
-.clock span{position:relative;font-weight:800;font-size:2rem;color:var(--gold-d);line-height:1;text-align:center}
-.clock small{display:block;font-size:.72rem;color:var(--muted)}
-.buyBtn{font-size:1.4rem;padding:14px 26px}
-.steps{display:flex;gap:4px}
-.steps span{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;background:#f2ebe0;color:var(--muted)}
-.steps span.on{background:var(--gold);color:#fff}
+/* bids */
+.bids{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:14px;max-width:560px}
+.bidN{border:2px solid var(--line);background:#fff;border-radius:10px;padding:8px 0;font-weight:800;font-size:1rem;color:var(--ink)}
+.bidN:hover:not(:disabled){border-color:var(--gold)}
+.bidN.on{background:var(--gold);border-color:var(--gold-d);color:#fff}
+.bidN:disabled{opacity:.35;cursor:default}
 .readyRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
 .chip{padding:4px 10px;border-radius:999px;background:#f2ebe0;font-weight:700;font-size:.9rem}
 .chip.ok{background:#dcefe2;color:var(--green-d)}
@@ -198,8 +191,7 @@ header .sp{flex:1}
   .panel{padding:10px}
   header .title{font-size:1.4rem}
   .dom{--sz:36px}
-  .clock{width:78px;height:78px}
-  .buyBtn{font-size:1.2rem;padding:12px 18px}
+  .bids{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
 </style>
 </head>
@@ -211,7 +203,7 @@ header .sp{flex:1}
     <div id="lobbyMain">
       <div class="logo">💐</div>
       <h1>Floristry</h1>
-      <p class="tag">Đấu giá hoa kiểu Hà Lan & trang trí tủ kính · 2 người</p>
+      <p class="tag">Đấu giá hoa & trang trí tủ kính · 2 người</p>
       <label for="nameInput">Tên của bạn</label>
       <input id="nameInput" maxlength="16" placeholder="VD: Hoàng" autocomplete="off">
       <div class="row"><button class="btn" id="createBtn">Tạo phòng</button></div>
@@ -292,7 +284,7 @@ const INFO={
 };
 const FW=8, FH=6;                  // khung tủ kính 8×6 ô
 const ROUNDS=10, START_FUNDS=30, MARKET=4, TAKE=3;
-const AUC_MS=15000, STEP_MS=3000, START_PRICE=5, PREP_MS=1500;
+const MIN_BID=1, MAX_BID=10;
 const DIRS=[[1,0],[0,1],[-1,0],[0,-1]]; // hướng từ nửa A tới nửa B
 const pts = n => n>=12?10 : n>=9?6 : n>=6?3 : n>=3?1 : 0;
 const sum = a => a.reduce((s,x)=>s+x,0);
@@ -366,7 +358,7 @@ function newMatch(names, bot){
   resetMatch(st); return st;
 }
 function resetMatch(st){
-  st.bag=shuffle(makeTiles()); st.funds=[START_FUNDS,START_FUNDS]; st.round=0; st.result=null; st.last=null;
+  st.bag=shuffle(makeTiles()); st.funds=[START_FUNDS,START_FUNDS]; st.round=0; st.result=null; st.last=null; st.lastWinner=null;
   st.boards=[0,1].map(()=>{ const g=emptyGrid(), t=st.bag.pop();
     g[2][3]={t:t.a,d:0,id:t.id}; g[2][4]={t:t.b,d:2,id:t.id}; return g; });
   startRound(st);
@@ -374,19 +366,31 @@ function resetMatch(st){
 function startRound(st){
   st.round++;
   st.market=st.bag.splice(-MARKET);
-  st.phase="ready"; st.ready=[false,!!st.bot]; st.auc=null; st.pending=[[],[]]; st.done=[false,false];
+  st.phase="bid"; st.bids=[null,null]; st.rebid=0; st.auc=null; st.pending=[[],[]]; st.done=[false,false];
   st.log.push({sys:1,t:`— Vòng ${st.round} —`});
   st.moveNo++;
 }
 function nextRound(st){
   if(st.round>=ROUNDS||st.bag.length<MARKET) endGame(st); else startRound(st);
 }
-function noBid(st){
-  if(st.phase!=="auction") return;
-  st.log.push({t:"Không ai mua — 4 ô hoa bị bỏ đi."});
-  st.last={text:"Hết giờ, không ai mua. 4 ô hoa bị bỏ đi."};
-  st.market=[]; st.moveNo++;
-  nextRound(st);
+// Cả hai đã chốt giá: ai cao hơn trả tiền lấy 3 ô, người kia không mất tiền và nhận 1 ô.
+// Bằng giá: ai vừa lấy 3 ô ở lần đấu trước thì thua; lần đấu đầu tiên của trận mà hoà thì đấu lại.
+function resolveBids(st){
+  const [b0,b1]=st.bids, n=st.names;
+  let w;
+  if(b0!==b1) w=b0>b1?0:1;
+  else if(st.lastWinner!=null) w=1-st.lastWinner;
+  else {
+    st.log.push({t:`Cùng trả $${b0} ở lần đấu đầu tiên — đấu lại!`});
+    st.last={text:`Cả hai cùng trả $${b0}. Lần đấu đầu tiên hoà nên đấu lại.`};
+    st.bids=[null,null]; st.rebid++; return;
+  }
+  const price=st.bids[w], tie=b0===b1;
+  st.funds[w]-=price; st.lastWinner=w;
+  st.auc={buyer:w, price, bids:st.bids.slice()};
+  st.phase="pick";
+  const txt=`${n[0]} trả $${b0}, ${n[1]} trả $${b1} → ${n[w]} thắng${tie?` (hoà giá, ${n[1-w]} vừa lấy 3 ô lần trước nên thua)`:""}, trả $${price}.`;
+  st.last={p:w,text:txt}; st.log.push({t:txt});
 }
 function endGame(st){
   const sc=st.boards.map(scoreBoard), fb=fundsBonus(st.funds);
@@ -397,7 +401,6 @@ function endGame(st){
   st.log.push({sys:1,t: w===null?"Hoà! Cùng vui nhé 🌼":`🏆 ${st.names[w]} thắng với ${totals[w]} điểm!`});
   st.moveNo++;
 }
-function priceAt(el){ return Math.max(1, START_PRICE-Math.floor(el/STEP_MS)); }
 
 function applyAction(st, p, a){
   if(!a||typeof a!=="object") return "Hành động không hợp lệ.";
@@ -406,22 +409,13 @@ function applyAction(st, p, a){
     if(st.phase!=="end") return "Trận chưa kết thúc.";
     st.log.push({sys:1,t:"— Trận mới —"}); resetMatch(st); return null;
   }
-  if(a.k==="ready"){
-    if(st.phase!=="ready") return "Chưa tới lúc đấu giá.";
-    st.ready[p]=true;
-    if(st.ready[0]&&st.ready[1]){ st.phase="auction"; st.auc={start:Date.now()+PREP_MS, buyer:null, price:0}; }
-    st.moveNo++; return null;
-  }
-  if(a.k==="buy"){
-    if(st.phase!=="auction") return "Phiên đấu giá đã đóng.";
-    const el=Date.now()-st.auc.start;
-    if(el<0) return "Chưa bắt đầu!";
-    if(el>=AUC_MS) return "Hết giờ rồi.";
-    const price=priceAt(el);
-    if(st.funds[p]<price) return "Không đủ tiền.";
-    st.funds[p]-=price; st.auc.buyer=p; st.auc.price=price; st.phase="pick";
-    st.last={p,text:`${who} bấm mua với giá $${price}.`};
-    st.log.push({t:`${who} mua với giá $${price}.`});
+  if(a.k==="bid"){
+    if(st.phase!=="bid") return "Chưa tới lúc trả giá.";
+    if(st.bids[p]!==null) return "Bạn đã chốt giá rồi.";
+    const v=a.v, max=maxBid(st.funds[p]);
+    if(!Number.isInteger(v)||v>max||v<Math.min(MIN_BID,max)) return `Giá phải từ $${Math.min(MIN_BID,max)} đến $${max}.`;
+    st.bids[p]=v;
+    if(st.bids[0]!==null&&st.bids[1]!==null) resolveBids(st);
     st.moveNo++; return null;
   }
   if(a.k==="pick"){
@@ -459,12 +453,14 @@ function applyAction(st, p, a){
   return "Hành động không hợp lệ.";
 }
 
+const maxBid = f => Math.min(MAX_BID,f);
+
 function viewFor(st,p){
   const o=1-p;
   return {
     me:p, names:st.names, bot:st.bot, round:st.round, phase:st.phase, funds:st.funds,
-    boards:st.boards, market:st.market, bag:st.bag.length, ready:st.ready, done:st.done,
-    auc: st.auc && {startIn:st.auc.start-Date.now(), buyer:st.auc.buyer, price:st.auc.price},
+    boards:st.boards, market:st.market, bag:st.bag.length, done:st.done, rebid:st.rebid, lastWinner:st.lastWinner,
+    myBid:st.bids[p], bidDone:st.bids.map(b=>b!==null), auc:st.auc,
     pending:st.pending[p], oppPending:st.pending[o].length,
     log:st.log.slice(-40), last:st.last, moveNo:st.moveNo, result:st.result
   };
@@ -509,8 +505,8 @@ function botPick(st,p){
   }
   return best.idx;
 }
-// Giá tối đa bot chịu trả (0 = không mua).
-function botMaxPrice(st,p){
+// Giá bot trả kín (không nhìn giá của đối thủ).
+function botBid(st,p){
   const m=st.market, o=1-p;
   const single=m.map(t=>greedyPlan(st.boards[p],[t]).gain);
   const oppSingle=m.map(t=>greedyPlan(st.boards[o],[t]).gain);
@@ -520,32 +516,25 @@ function botMaxPrice(st,p){
   const oppBuy=greedyPlan(st.boards[o],m.filter((_,i)=>i!==oppLeave)).gain;
   const adv=(buy-single[oppLeave])+0.5*(oppBuy-oppSingle[Math.max(0,single.indexOf(Math.min(...single)))]);
   const roundsLeft=ROUNDS-st.round+1, spare=st.funds[p]-st.funds[o];
-  let price=Math.round(adv*0.65+(Math.random()-0.5)*1.4+(st.funds[p]>roundsLeft*3?0.6:0)+(spare>6?0.5:0)-(spare<-4?0.6:0));
-  return Math.max(0,Math.min(START_PRICE,price,st.funds[p]));
+  const loseTie=st.lastWinner===p;  // hoà giá thì mình thua → nhích thêm chút
+  let price=Math.round(adv*0.9+(Math.random()-0.5)*2+(st.funds[p]>roundsLeft*4?1:0)+(spare>6?0.7:0)-(spare<-6?0.8:0)+(loseTie?0.5:0));
+  const max=maxBid(st.funds[p]);
+  return Math.max(Math.min(MIN_BID,max),Math.min(max,price));
 }
-let botTimer=null, botKey="", aucTimer=null, aucKey="";
+let botTimer=null, botKey="";
 function maybeBot(){
   if(!state||!state.bot) return;
   const st=state, key=`${st.moveNo}|${st.phase}`;
   if(key===botKey) return;
   botKey=key; clearTimeout(botTimer);
-  if(st.phase==="auction"&&st.auc.buyer===null){
-    const mp=botMaxPrice(st,1); if(!mp) return;
-    const at=(START_PRICE-mp)*STEP_MS+300+Math.random()*2300;
-    botTimer=setTimeout(()=>{ if(state.phase==="auction"&&!applyAction(state,1,{k:"buy"})) broadcast(); }, Math.max(0,st.auc.start-Date.now())+at);
+  if(st.phase==="bid"&&st.bids[1]===null){
+    botTimer=setTimeout(()=>{ if(state.phase==="bid"&&state.bids[1]===null){ applyAction(state,1,{k:"bid",v:botBid(state,1)}); broadcast(); } }, 900+Math.random()*1500);
   } else if(st.phase==="pick"&&st.auc.buyer===1){
     botTimer=setTimeout(()=>{ if(state.phase==="pick"){ applyAction(state,1,{k:"pick",idx:botPick(state,1)}); broadcast(); } }, 1200);
   } else if(st.phase==="decor"&&!st.done[1]){
     botTimer=setTimeout(()=>{ if(state.phase==="decor"&&!state.done[1]){
       const err=applyAction(state,1,{k:"place",ops:greedyPlan(state.boards[1],state.pending[1]).ops}); if(err) console.warn("bot:",err); broadcast(); } }, 1400);
   }
-}
-// Chủ phòng giữ đồng hồ đấu giá: hết 15 giây mà chưa ai mua thì bỏ 4 ô.
-function syncAuction(){
-  if(!state||state.phase!=="auction"){ clearTimeout(aucTimer); aucKey=""; return; }
-  const key=state.round+"|"+state.auc.start; if(key===aucKey) return;
-  aucKey=key; clearTimeout(aucTimer);
-  aucTimer=setTimeout(()=>{ if(state.phase==="auction"){ noBid(state); broadcast(); } }, state.auc.start+AUC_MS-Date.now()+200);
 }
 
 /* ================= NETWORK ================= */
@@ -608,7 +597,6 @@ function onGuestConn(c){
   c.on("close",()=>{ if(c===guestConn){ guestConn=null; if(state){ state.log.push({t:`${guestName} mất kết nối…`}); broadcast(); } } });
 }
 function broadcast(){
-  syncAuction();
   onView(viewFor(state,0));
   if(guestConn && guestConn.open) guestConn.send({t:"state", view:viewFor(state,1)});
   maybeBot();
@@ -676,15 +664,14 @@ function domHTML(tile,o=0,cls="",extra=""){
 // Trạng thái cục bộ: chọn ô ở chợ, xếp nháp vào tủ kính
 let pickSel=new Set(), pickKey="";
 let stage=null, stageKey="", selTile=0, rot=0, hoverXY=null, hlType=null, freshIds=new Set();
-let aucLocalStart=0, aucTick=null;
+let bidSel=null;
 
 function onView(v){
   const prev=view; view=v;
-  const pk=`${v.round}|${v.phase}`;
-  if(pk!==pickKey){ pickKey=pk; pickSel=new Set(); }
+  const pk=`${v.round}|${v.phase}|${v.rebid}`;
+  if(pk!==pickKey){ pickKey=pk; pickSel=new Set(); bidSel=null; }
   const sk=`${v.round}|${v.phase}|${v.pending.map(t=>t.id).join(",")}|${v.done[v.me]}`;
   if(sk!==stageKey){ stageKey=sk; stage={ops:[], grid:v.boards[v.me]}; selTile=0; rot=0; }
-  if(v.phase==="auction"&&v.auc) aucLocalStart=performance.now()+v.auc.startIn;
   // ô vừa xuất hiện trên bàn (của đối thủ, hoặc bị chủ phòng chèn) → hiệu ứng pop một lần
   const ids=b=>new Set(b.flat().filter(Boolean).map(c=>c.id));
   freshIds=new Set();
@@ -718,47 +705,33 @@ function render(){
 function oppStatus(){
   const v=view, o=1-v.me;
   if(v.phase==="decor") return v.done[o]?"✔ đã xếp xong":`đang xếp ${v.oppPending} ô…`;
-  if(v.phase==="ready") return v.ready[o]?"✔ sẵn sàng":"chưa sẵn sàng";
+  if(v.phase==="bid") return v.bidDone[o]?"✔ đã chốt giá":"đang chọn giá…";
   return "";
 }
 
 function renderAuction(){
   const v=view, me=v.me, el=$("auction");
-  clearInterval(aucTick); aucTick=null;
-  if(v.phase==="ready"){
-    const r=v.ready[me];
+  if(v.phase==="bid"){
+    const done=v.myBid!==null, max=maxBid(v.funds[me]), min=Math.min(MIN_BID,max), od=v.bidDone[1-me];
+    if(bidSel!==null&&(bidSel>max||bidSel<min)) bidSel=null;
+    if(max===0) bidSel=0;
+    const tie = v.lastWinner===null ? "Hoà giá ở lần đấu đầu tiên thì đấu lại."
+      : v.lastWinner===me ? "Hoà giá thì bạn thua (bạn vừa lấy 3 ô lần trước)."
+      : `Hoà giá thì bạn thắng (${esc(v.names[1-me])} vừa lấy 3 ô lần trước).`;
     el.innerHTML=`<div class="tiles">${v.market.map(t=>domHTML(t)).join("")}</div>
-      <div class="readyRow">
-        <button class="btn gold" id="readyBtn" ${r?"disabled":""}>${r?"Đã sẵn sàng":"🔔 Sẵn sàng đấu giá"}</button>
-        <span class="chip ${r?"ok":""}">${esc(v.names[me])} ${r?"✔":"…"}</span>
-        <span class="chip ${v.ready[1-me]?"ok":""}">${esc(v.names[1-me])} ${v.ready[1-me]?"✔":"…"}</span>
-      </div>
-      <div class="small" style="margin-top:8px">Giá bắt đầu $5, giảm $1 mỗi 3 giây (tối thiểu $1). Ai bấm MUA trước lấy 3 ô, người kia được ô còn lại miễn phí.</div>`;
-    $("readyBtn").onclick=()=>sendAction({k:"ready"});
-  } else if(v.phase==="auction"){
-    el.innerHTML=`<div class="tiles">${v.market.map(t=>domHTML(t)).join("")}</div>
-      <div class="auc">
-        <div class="clock" id="clock"><span id="clockTxt">$5</span></div>
-        <div>
-          <div class="steps" id="steps">${[5,4,3,2,1].map(p=>`<span data-p="${p}">$${p}</span>`).join("")}</div>
-          <div class="row" style="margin-top:10px"><button class="btn buyBtn" id="buyBtn">MUA</button></div>
-        </div>
-      </div>`;
-    $("buyBtn").onclick=()=>sendAction({k:"buy"});
-    const tick=()=>{
-      const elp=performance.now()-aucLocalStart, c=$("clock"); if(!c) return;
-      if(elp<0){ $("clockTxt").innerHTML=`${Math.ceil(-elp/1000)}<small>chuẩn bị</small>`; c.style.setProperty("--p",1); $("buyBtn").disabled=true; return; }
-      const left=Math.max(0,AUC_MS-elp), price=priceAt(elp);
-      c.style.setProperty("--p",left/AUC_MS);
-      $("clockTxt").innerHTML=left>0?`$${price}<small>${(left/1000).toFixed(1)}s</small>`:`⏱<small>hết giờ</small>`;
-      document.querySelectorAll("#steps span").forEach(s=>s.classList.toggle("on",+s.dataset.p===price&&left>0));
-      const b=$("buyBtn"), poor=v.funds[me]<price;
-      b.disabled=left<=0||poor; b.textContent=poor?`Không đủ $${price}`:`MUA · $${price}`;
-    };
-    tick(); aucTick=setInterval(tick,100);
+      ${done?`<div class="readyRow"><span class="chip ok">Bạn đã chốt $${v.myBid}</span>
+          <span class="chip ${od?"ok":""}">${esc(v.names[1-me])} ${od?"✔ đã chốt":"đang chọn giá…"}</span></div>`
+      :`<div class="bids">${Array.from({length:MAX_BID},(_,k)=>k+1).map(n=>
+          `<button class="bidN ${bidSel===n?"on":""}" data-bid="${n}" ${n>max?"disabled":""}>$${n}</button>`).join("")}</div>
+        <div class="readyRow">
+          <button class="btn gold" id="bidBtn" ${bidSel===null?"disabled":""}>${bidSel===null?"Chọn giá":`🔒 Chốt giá $${bidSel}`}</button>
+          <span class="chip ${od?"ok":""}">${esc(v.names[1-me])} ${od?"✔ đã chốt":"đang chọn giá…"}</span>
+        </div>`}
+      <div class="small" style="margin-top:8px">Trả giá kín $1–$10. Ai cao hơn trả tiền và chọn 3 ô; người kia không mất tiền, nhận ô còn lại. ${tie}</div>`;
+    if($("bidBtn")) $("bidBtn").onclick=()=>{ if(bidSel!==null) sendAction({k:"bid",v:bidSel}); };
   } else if(v.phase==="pick"){
     const mine=v.auc.buyer===me;
-    el.innerHTML=`<div class="tiles">${v.market.map((t,i)=>domHTML(t,0,`${mine?"click":""} ${pickSel.has(i)?"pick":""}`,`data-pk="${i}"`)).join("")}</div>
+    el.innerHTML=`<div class="small" style="margin-bottom:6px">Giá: ${esc(v.names[me])} $${v.auc.bids[me]} · ${esc(v.names[1-me])} $${v.auc.bids[1-me]}</div><div class="tiles">${v.market.map((t,i)=>domHTML(t,0,`${mine?"click":""} ${pickSel.has(i)?"pick":""}`,`data-pk="${i}"`)).join("")}</div>
       <div class="readyRow">${mine
         ?`<span class="hint">Chọn 3 ô muốn lấy (${pickSel.size}/3). Ô còn lại thuộc về ${esc(v.names[1-me])}.</span>
           <button class="btn green" id="pickBtn" ${pickSel.size===3?"":"disabled"}>Lấy 3 ô này</button>`
@@ -856,6 +829,8 @@ function renderScores(){
 document.addEventListener("click",e=>{
   if(!view) return;
   const pk=e.target.closest("[data-pk]"), tr=e.target.closest("[data-tr]"), cell=e.target.closest("#myFrame [data-x]");
+  const bn=e.target.closest("[data-bid]");
+  if(bn && view.phase==="bid" && view.myBid===null){ bidSel=+bn.dataset.bid; renderAuction(); return; }
   if(pk && view.phase==="pick" && view.auc.buyer===view.me){
     const i=+pk.dataset.pk;
     if(pickSel.has(i)) pickSel.delete(i); else if(pickSel.size<TAKE) pickSel.add(i); else toast("Chỉ lấy 3 ô thôi.");
@@ -881,7 +856,8 @@ $("myFrame").addEventListener("contextmenu",e=>{ if(view&&view.phase==="decor"){
 document.addEventListener("keydown",e=>{
   if(!view||e.target.tagName==="INPUT") return;
   if((e.key==="r"||e.key==="R")&&view.phase==="decor") rotate();
-  if(e.key===" "&&view.phase==="auction"){ e.preventDefault(); const b=$("buyBtn"); if(b&&!b.disabled) b.click(); }
+  if(view.phase==="bid"&&view.myBid===null&&/^[0-9]$/.test(e.key)){ const n=e.key==="0"?10:+e.key; if(n<=maxBid(view.funds[view.me])){ bidSel=n; renderAuction(); } }
+  if(e.key==="Enter"&&view.phase==="bid"){ const b=$("bidBtn"); if(b&&!b.disabled) b.click(); }
 });
 $("scoreBox").addEventListener("mouseover",e=>{ const r=e.target.closest("[data-hl]"); const t=r?r.dataset.hl:null; if(t!==hlType){ hlType=t; render(); } });
 $("scoreBox").addEventListener("mouseleave",()=>{ if(hlType){ hlType=null; render(); } });
@@ -913,7 +889,8 @@ function showRules(){
     <h3>Mỗi vòng</h3>
     <ul>
       <li><b>Chợ:</b> rút 4 ô hoa (mỗi ô domino có 2 bông, có thể khác loại).</li>
-      <li><b>Đấu giá kiểu Hà Lan:</b> cả hai bấm Sẵn sàng. Đồng hồ chạy 15 giây, giá bắt đầu $5 và giảm $1 mỗi 3 giây. Ai bấm <b>MUA</b> trước trả giá hiện tại, chọn 3 ô; người kia nhận ô còn lại miễn phí. Không ai mua thì bỏ cả 4 ô.</li>
+      <li><b>Trả giá kín:</b> mỗi người chọn một giá từ $1 đến $10 rồi chốt. Ai trả cao hơn mất số tiền đó và chọn 3 ô; người kia <b>không mất tiền</b> và nhận ô còn lại.</li>
+      <li><b>Hoà giá:</b> ai vừa lấy 3 ô ở lần đấu trước thì thua. Nếu hoà ngay lần đấu đầu tiên của trận thì đấu lại.</li>
       <li><b>Trang trí:</b> cả hai cùng lúc đặt ô mới vào tủ kính ${FW}×${FH} của mình. Được xoay; phải chạm trọn cạnh một ô đã có (không tính chéo); không được di chuyển ô cũ. Được trượt khung bất cứ lúc nào (đặt ra mép ngoài để trượt). Không còn chỗ thì phải bỏ ô.</li>
     </ul>
     <h3>Tính điểm cuối trận</h3>
