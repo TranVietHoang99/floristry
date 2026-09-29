@@ -11,8 +11,8 @@ Game **Floristry** (David Gordon & TAM, Uncommons Publishing) cho 2 người, ch
 10 vòng, mỗi vòng:
 1. **Chợ**: rút 4 ô domino hoa (2 bông mỗi ô, có thể khác loại).
 2. **Trả giá kín**: mỗi người chọn giá $1–$10 rồi bấm *Chốt*. Ai trả cao hơn mất số tiền đó và chọn 3 ô;
-   người kia **không mất tiền** và nhận ô còn lại. Hoà giá: ai vừa lấy 3 ô ở lần đấu trước thì thua;
-   hoà ngay lần đấu đầu tiên của trận thì đấu lại.
+   người kia **không mất tiền** và nhận ô còn lại. Hoà giá: ai vừa lấy 3 ô ở vòng trước thì thua;
+   riêng vòng 1 mà hoà thì đấu lại.
    (Bản gốc dùng đấu giá kiểu Hà Lan có đồng hồ 15 giây trên app.)
 3. **Trang trí**: cả hai cùng lúc đặt ô mới vào tủ kính. Được xoay, phải chạm cạnh ô cũ, không được dời ô cũ.
 

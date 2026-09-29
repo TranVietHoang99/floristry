@@ -374,22 +374,22 @@ function nextRound(st){
   if(st.round>=ROUNDS||st.bag.length<MARKET) endGame(st); else startRound(st);
 }
 // Cả hai đã chốt giá: ai cao hơn trả tiền lấy 3 ô, người kia không mất tiền và nhận 1 ô.
-// Bằng giá: ai vừa lấy 3 ô ở lần đấu trước thì thua; lần đấu đầu tiên của trận mà hoà thì đấu lại.
+// Bằng giá: vòng 1 thì đấu lại; từ vòng 2, ai vừa lấy 3 ô ở vòng trước thì thua.
 function resolveBids(st){
   const [b0,b1]=st.bids, n=st.names;
   let w;
   if(b0!==b1) w=b0>b1?0:1;
-  else if(st.lastWinner!=null) w=1-st.lastWinner;
+  else if(st.round>1) w=1-st.lastWinner;
   else {
-    st.log.push({t:`Cùng trả $${b0} ở lần đấu đầu tiên — đấu lại!`});
-    st.last={text:`Cả hai cùng trả $${b0}. Lần đấu đầu tiên hoà nên đấu lại.`};
+    st.log.push({t:`Cùng trả $${b0} ở vòng 1 — đấu lại!`});
+    st.last={text:`Cả hai cùng trả $${b0}. Vòng 1 hoà nên đấu lại.`};
     st.bids=[null,null]; st.rebid++; return;
   }
   const price=st.bids[w], tie=b0===b1;
   st.funds[w]-=price; st.lastWinner=w;
   st.auc={buyer:w, price, bids:st.bids.slice()};
   st.phase="pick";
-  const txt=`${n[0]} trả $${b0}, ${n[1]} trả $${b1} → ${n[w]} thắng${tie?` (hoà giá, ${n[1-w]} vừa lấy 3 ô lần trước nên thua)`:""}, trả $${price}.`;
+  const txt=`${n[0]} trả $${b0}, ${n[1]} trả $${b1} → ${n[w]} thắng${tie?` (hoà giá, ${n[1-w]} vừa lấy 3 ô ở vòng trước nên thua)`:""}, trả $${price}.`;
   st.last={p:w,text:txt}; st.log.push({t:txt});
 }
 function endGame(st){
@@ -715,9 +715,9 @@ function renderAuction(){
     const done=v.myBid!==null, max=maxBid(v.funds[me]), min=Math.min(MIN_BID,max), od=v.bidDone[1-me];
     if(bidSel!==null&&(bidSel>max||bidSel<min)) bidSel=null;
     if(max===0) bidSel=0;
-    const tie = v.lastWinner===null ? "Hoà giá ở lần đấu đầu tiên thì đấu lại."
-      : v.lastWinner===me ? "Hoà giá thì bạn thua (bạn vừa lấy 3 ô lần trước)."
-      : `Hoà giá thì bạn thắng (${esc(v.names[1-me])} vừa lấy 3 ô lần trước).`;
+    const tie = v.round===1 ? "Vòng 1 mà hoà giá thì đấu lại."
+      : v.lastWinner===me ? "Hoà giá thì bạn thua (bạn vừa lấy 3 ô ở vòng trước)."
+      : `Hoà giá thì bạn thắng (${esc(v.names[1-me])} vừa lấy 3 ô ở vòng trước).`;
     el.innerHTML=`<div class="tiles">${v.market.map(t=>domHTML(t)).join("")}</div>
       ${done?`<div class="readyRow"><span class="chip ok">Bạn đã chốt $${v.myBid}</span>
           <span class="chip ${od?"ok":""}">${esc(v.names[1-me])} ${od?"✔ đã chốt":"đang chọn giá…"}</span></div>`
@@ -890,7 +890,7 @@ function showRules(){
     <ul>
       <li><b>Chợ:</b> rút 4 ô hoa (mỗi ô domino có 2 bông, có thể khác loại).</li>
       <li><b>Trả giá kín:</b> mỗi người chọn một giá từ $1 đến $10 rồi chốt. Ai trả cao hơn mất số tiền đó và chọn 3 ô; người kia <b>không mất tiền</b> và nhận ô còn lại.</li>
-      <li><b>Hoà giá:</b> ai vừa lấy 3 ô ở lần đấu trước thì thua. Nếu hoà ngay lần đấu đầu tiên của trận thì đấu lại.</li>
+      <li><b>Hoà giá:</b> ai vừa lấy 3 ô ở vòng trước thì thua. Riêng vòng 1 mà hoà thì đấu lại.</li>
       <li><b>Trang trí:</b> cả hai cùng lúc đặt ô mới vào tủ kính ${FW}×${FH} của mình. Được xoay; phải chạm trọn cạnh một ô đã có (không tính chéo); không được di chuyển ô cũ. Được trượt khung bất cứ lúc nào (đặt ra mép ngoài để trượt). Không còn chỗ thì phải bỏ ô.</li>
     </ul>
     <h3>Tính điểm cuối trận</h3>
